@@ -1,0 +1,11 @@
+.DS_Store
+*.log
+Logs/
+Temp/
+Library/
+obj/
+*.user
+*.pidb
+*.suo
+*.tmp
+*.bak
