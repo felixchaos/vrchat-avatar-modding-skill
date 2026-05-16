@@ -1,6 +1,6 @@
 ---
 name: vrchat-avatar-modding
-description: Set up and automate VRChat avatar modding workspaces in Unity. Use when Codex needs to install or verify the VRChat-compatible Unity/VCC/VPM environment, import arbitrary avatar and clothing packages, attach adapted clothing to an avatar, merge armatures/bones with Modular Avatar or NDMF, preserve and combine FX controllers, expression menus, and parameters, localize menu labels, validate synced parameter cost, debug clothing/tail/body toggles, preview with Gesture Manager, or produce a reusable VRChat-ready scene/prefab for any avatar plus any compatible outfit.
+description: Set up and automate VRChat avatar modding workspaces in Unity. Use when Codex needs to install or verify the VRChat-compatible Unity/VCC/VPM environment, import arbitrary avatar and clothing packages, attach adapted clothing to an avatar, merge armatures/bones with Modular Avatar or NDMF, preserve and combine FX controllers, expression menus, and parameters, localize menu labels, validate synced parameter cost, debug clothing/tail/body toggles, preview with Gesture Manager, prepare private SDK upload builds, or produce a reusable VRChat-ready scene/prefab for any avatar plus any compatible outfit.
 ---
 
 # VRChat Avatar Modding
@@ -16,7 +16,7 @@ For reusable Unity editor automation patterns, read `references/unity-editor-aut
 - Use the current VRChat-supported Unity version and SDK/VPM package set. If the current supported Unity version or package version matters, verify from official VRChat/Unity sources before installing or changing versions.
 - Prefer established VRChat tools over manual rig surgery: VCC/VPM, VRChat SDK Avatars, NDMF, Modular Avatar, lilToon/Poiyomi as required by materials, Gesture Manager for local menu testing, and Avatar Optimizer only when optimization is requested.
 - Treat a clothing package as "adapted" only when it was made for the avatar or its armature and body proportions. If the mesh does not fit, weights are wrong, or bone names do not correspond, stop and explain that Blender/weight-painting or a dedicated fitting tool is required.
-- Never upload, publish, delete source assets, or overwrite user packages unless explicitly asked.
+- Never upload, publish, delete source assets, or overwrite user packages unless explicitly asked. When upload is requested, treat login, 2FA, and account authorization as a user hand-off in the Unity SDK or browser; do not read, infer, or store credentials.
 
 ## Environment Setup
 
@@ -104,7 +104,9 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
 
 7. Set safe defaults:
    - Avoid default overlap between base clothing and new outfit.
-   - If base menu controls are semantically `*_OFF` toggles, defaulting those bools to `true` usually hides the original outfit while preserving the menu.
+   - Do not infer toggle polarity from names alone. Inspect animation curves, FX conditions, original expression parameter defaults, and scene active states before changing defaults.
+   - If a Modular Avatar add-on must stay active for installers or merge components, keep its root active and hide only renderer-bearing child objects by default.
+   - Synchronize defaults across the scene/prefab state, `VRCExpressionParameters`, `ModularAvatarParameters`, and the NDMF-baked descriptor.
    - Keep the new outfit defaults from the vendor package unless they conflict with the base avatar.
    - Align body-size defaults with the chosen clothing variant.
 
@@ -117,6 +119,13 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
   - If the avatar's slider changes body blendshapes but the clothing lacks matching blendshapes, document the limitation or add supported shape-change components.
   - Disable or reset toy/prop animations that drive breast or body bones when testing alignment.
 - For props and weapons, accept local prop bones when intended, but ensure body clothing renderers use avatar bones.
+
+## Menus And Toggle Semantics
+
+- Preserve vendor control labels unless the user asks for translation. If labels are explicit state controls such as `On`/`Off`, first determine whether they control object visibility, animation playback, mode selection, or a lock; do not merge unrelated controls just because their names look paired.
+- VRChat expression pages have eight slots. Flatten only when it improves actual usability and keeps the page within the limit; otherwise keep clear submenus.
+- For toggle buttons, verify the menu control writes the intended parameter value and that the FX layer or Modular Avatar generated layer consumes that same parameter.
+- For mutually exclusive options, prefer a single `Int` parameter and option controls that set distinct values when the vendor asset is already structured that way. Do not convert booleans into ints unless you can also update every FX condition and menu control.
 
 ## Validation
 
@@ -140,7 +149,13 @@ Run validation after every substantial rebuild:
    - Missing/null bones must be `0`.
    - Local bones should be limited to accessories, weapons, and props that are intentionally self-contained.
 
-4. Runtime Gesture Manager preview:
+4. Default/radial sync audit:
+   - Confirm the default scene view is the desired avatar state, usually the original base outfit unless the user chose otherwise.
+   - Confirm add-on outfits, props, DPS/interaction systems, and alternate bodies are off or hidden by default unless explicitly requested.
+   - Confirm original and outfit parameters have matching defaults in source parameters, Modular Avatar parameter components, and the NDMF-baked descriptor.
+   - Confirm every important menu control has a matching expression parameter and that the baked FX controller contains conditions for it.
+
+5. Runtime Gesture Manager preview:
    - Enter Play Mode.
    - Attach Gesture Manager to the avatar.
    - Open `Expressions`.
@@ -148,9 +163,22 @@ Run validation after every substantial rebuild:
    - Toggle each main outfit piece off and on, including both base tail and outfit tail.
    - Use a walk preview or VRChat proxy walk animation to catch bad bone binding, clipping, or offsets.
 
-5. Capture evidence:
+6. Capture evidence:
    - Save a short text report with parameter cost, menu tree, FX checks, and bone checks.
    - Save at least one screenshot from the test scene when the user wants visual confirmation.
+
+## SDK Uploads And Versioning
+
+Only perform SDK upload when the user explicitly requests it.
+
+- Before uploading, run static, baked, default/radial, and Gesture Manager checks. Do not upload a build that fails the default/menu sync audit unless the user explicitly accepts the issue.
+- Prefer the visible VRChat SDK Control Panel for the final upload flow because it handles login, 2FA, account permissions, ownership prompts, thumbnails, content warnings, and publish buttons in the supported path.
+- Unity editor scripts may call the public SDK builder API for repeatable builds or uploads, but they still require a valid SDK login session. If a headless or `-executeMethod` upload cannot load `APIUser.CurrentUser`, open the SDK Authentication panel and let the user log in.
+- For a first upload, make or select a thumbnail, set `releaseStatus` to `private` unless the user asks otherwise, and let the SDK assign the `PipelineManager.blueprintId`. Keep that blueprint ID in the work scene/prefab for later version updates.
+- For adult, suggestive, violent, horror, or otherwise sensitive avatar content, set the appropriate VRChat content warning tags in the SDK upload metadata. Do not publish public content by default.
+- Use a simple project build version such as `0.1.0` for the first real in-game test, then increment the patch or minor version after user-tested changes.
+- After upload, save the scene, prefab, project assets, and a text report containing avatar name, version, blueprint ID if visible, validation results, SDK warnings, and upload time.
+- If the user asks for a backup, copy the Unity project source to the requested external drive or backup directory. Exclude generated caches such as `Library`, `Temp`, `Obj`, and crash dumps; include `Assets`, `Packages`, `ProjectSettings`, `UserSettings`, and `Logs`.
 
 ## Troubleshooting
 
@@ -181,9 +209,23 @@ Run validation after every substantial rebuild:
   - Avoid judging mesh quality from a zoomed-out screenshot.
 
 - Unity appears stuck:
-  - Check whether it is compiling/importing.
-  - Inspect `~/Library/Logs/Unity/Editor.log`.
-  - Do not interrupt imports unless clearly deadlocked.
+   - Check whether it is compiling/importing.
+   - Inspect `~/Library/Logs/Unity/Editor.log`.
+   - Do not interrupt imports unless clearly deadlocked.
+
+- Unity process exists but no window is visible:
+  - Check running Unity processes and the project lockfile owner.
+  - Quit the stale Unity process gracefully and reopen the exact editor version directly with `-projectPath`.
+  - Remove `Temp/UnityLockfile` only when no Unity process owns it.
+
+- SDK upload is blocked at login:
+  - Open `VRChat SDK > Show Control Panel > Authentication`.
+  - Ask the user to complete username/password/2FA or browser authorization.
+  - Do not scrape browser cookies or ask the user to paste passwords.
+
+- SDK upload fails after a headless build script:
+  - Read both the generated upload report and `~/Library/Logs/Unity/Editor.log`.
+  - Retry through the visible SDK panel when account state, ownership confirmation, content warning UI, or thumbnail UI is involved.
 
 ## Completion Criteria
 
@@ -195,4 +237,6 @@ Finish with:
 - Merged menus and parameters under work assets.
 - Passing parameter budget report.
 - Passing baked bone report.
+- Passing default/radial sync report.
 - Gesture Manager preview ready for user testing, or Unity closed if requested.
+- Optional private SDK upload completed, saved, versioned, and backed up only when explicitly requested.

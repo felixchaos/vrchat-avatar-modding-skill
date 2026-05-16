@@ -193,6 +193,55 @@ private static int EstimateParameterCost(VRCExpressionParameters.Parameter p)
 
 Use `parameters.CalcTotalCost()` when the VRChat SDK is available. Report both total cost and a list of parameters.
 
+## Default And Radial Sync Audit
+
+When the requested default state matters, audit four surfaces instead of only checking the visible scene:
+
+- Scene or prefab active states and enabled renderers.
+- `VRCExpressionParameters` defaults assigned to the descriptor.
+- `ModularAvatarParameters` defaults on the avatar and installed add-ons.
+- The NDMF-baked descriptor, menu tree, and FX controller.
+
+Useful checks:
+
+```csharp
+private static bool HasMenuControl(VRCExpressionsMenu menu, string parameterName)
+{
+    if (!menu) return false;
+    var visited = new HashSet<VRCExpressionsMenu>();
+    return Walk(menu);
+
+    bool Walk(VRCExpressionsMenu current)
+    {
+        if (!current || !visited.Add(current)) return false;
+        foreach (var control in current.controls)
+        {
+            if (control.parameter.name == parameterName) return true;
+            if (control.subMenu && Walk(control.subMenu)) return true;
+        }
+        return false;
+    }
+}
+```
+
+For add-ons that must stay active so Modular Avatar installers run, hide renderer-bearing children by default instead of disabling the add-on root:
+
+```csharp
+private static int HideRenderersUnder(Transform root)
+{
+    var count = 0;
+    foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+    {
+        renderer.gameObject.SetActive(false);
+        EditorUtility.SetDirty(renderer.gameObject);
+        count++;
+    }
+    return count;
+}
+```
+
+After `AvatarProcessor.ProcessAvatar(duplicate)`, inspect the baked descriptor's expression parameters and menu controls. A passing report should include parameter cost, default values, menu coverage, and FX condition coverage for the original avatar and each outfit or add-on namespace.
+
 ## Baked Bone Audit
 
 ```csharp
@@ -244,6 +293,48 @@ For a repeatable test scene:
 - Select the Gesture Manager so the inspector shows the radial menu.
 
 Do not compile new scripts while Play Mode is running unless you intentionally accept a domain reload.
+
+## SDK Upload Automation Notes
+
+Use visible SDK UI for final upload when possible. If writing an editor script for a repeatable private test upload, keep it project-local and report every step:
+
+- Open and save the work scene.
+- Run the full validation and default/radial sync audits first.
+- Ensure a `PipelineManager` exists.
+- Create or select an 800x600 thumbnail for first upload.
+- Show the SDK control panel and select the avatar.
+- Use the public `IVRCSdkAvatarBuilderApi` for builds only after account state is valid.
+
+Skeleton:
+
+```csharp
+using System.Reflection;
+using VRC.Core;
+using VRC.SDK3A.Editor;
+using VRC.SDKBase.Editor;
+using VRC.SDKBase.Editor.Api;
+
+private static async Task BuildWithSdk(GameObject avatarRoot, VRCAvatar avatarData, string thumbnailPath)
+{
+    typeof(VRCSdkControlPanel)
+        .GetMethod("ShowControlPanel", BindingFlags.Static | BindingFlags.NonPublic)
+        ?.Invoke(null, null);
+    if (APIUser.CurrentUser == null)
+    {
+        throw new InvalidOperationException("Open SDK Authentication and log in before uploading.");
+    }
+    if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out var builder))
+    {
+        throw new InvalidOperationException("Avatar builder API unavailable.");
+    }
+    builder.SelectAvatar(avatarRoot);
+    await builder.BuildAndUpload(avatarRoot, avatarData, thumbnailPath);
+}
+```
+
+If `APIUser.CurrentUser` fails to load from saved credentials in a headless run, stop automation and hand off login to the user in `VRChat SDK > Authentication`. Do not attempt to retrieve credentials or cookies from Chrome.
+
+After a successful upload, write a version manifest and back up the Unity project source. Use `rsync` or equivalent with cache exclusions such as `Library/`, `Temp/`, `Obj/`, and crash dump folders.
 
 ## Useful Log Checks
 

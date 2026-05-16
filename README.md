@@ -10,8 +10,10 @@ It teaches Codex how to:
 - Preserve original avatar FX, expression menus, parameters, and toggles.
 - Merge outfit menus and parameters without hardcoding specific assets.
 - Validate VRChat synced parameter usage.
+- Audit default state synchronization across scene objects, expression parameters, Modular Avatar defaults, and the baked radial menu.
 - Test original clothing, outfit pieces, tails, body sliders, and common toggle failures.
 - Preview and debug the result with Gesture Manager.
+- Prepare private SDK upload builds, version reports, and project backups when explicitly requested.
 
 The skill is intentionally generic. It does not depend on any specific avatar, outfit, shader, or vendor package.
 
@@ -43,7 +45,7 @@ Provide:
 ## Contents
 
 - `SKILL.md`: the main workflow Codex loads when the skill triggers.
-- `references/unity-editor-automation.md`: Unity editor automation patterns for rebuilding scenes, merging Modular Avatar settings, cloning menus, auditing parameters, and checking baked bones.
+- `references/unity-editor-automation.md`: Unity editor automation patterns for rebuilding scenes, merging Modular Avatar settings, cloning menus, auditing parameters/defaults, checking baked bones, and preparing SDK upload automation.
 - `agents/openai.yaml`: UI metadata for Codex.
 
 ## Notes

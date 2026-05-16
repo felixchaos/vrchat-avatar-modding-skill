@@ -1,4 +1,4 @@
 interface:
   display_name: "VRChat Avatar Modding"
-  short_description: "Configure and verify VRChat avatar mods"
-  default_prompt: "Set up a VRChat avatar modding workspace for the provided avatar and clothing assets, merge bones and menus safely, validate parameter usage and toggles, and prepare a Unity preview."
+  short_description: "Configure, verify, and version VRChat avatar mods"
+  default_prompt: "Set up a VRChat avatar modding workspace for the provided avatar and clothing assets, merge bones and menus safely, validate parameter usage, default radial-menu state, and toggles, then prepare a Unity preview or private SDK upload build if explicitly requested."
