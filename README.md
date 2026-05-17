@@ -10,10 +10,11 @@ It teaches Codex how to:
 - Preserve original avatar FX, expression menus, parameters, and toggles.
 - Merge outfit menus and parameters without hardcoding specific assets.
 - Validate VRChat synced parameter usage.
+- Audit and repair duplicated PhysBone components in generated work assets.
 - Audit default state synchronization across scene objects, expression parameters, Modular Avatar defaults, and the baked radial menu.
 - Test original clothing, outfit pieces, tails, body sliders, and common toggle failures.
 - Preview and debug the result with Gesture Manager.
-- Prepare private SDK upload builds, version reports, and project backups when explicitly requested.
+- Prepare private SDK upload builds, version reports, and project backups when explicitly requested, with credential handling guidance that never stores passwords or tokens.
 
 The skill is intentionally generic. It does not depend on any specific avatar, outfit, shader, or vendor package.
 

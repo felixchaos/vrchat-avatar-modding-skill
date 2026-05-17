@@ -16,7 +16,7 @@ For reusable Unity editor automation patterns, read `references/unity-editor-aut
 - Use the current VRChat-supported Unity version and SDK/VPM package set. If the current supported Unity version or package version matters, verify from official VRChat/Unity sources before installing or changing versions.
 - Prefer established VRChat tools over manual rig surgery: VCC/VPM, VRChat SDK Avatars, NDMF, Modular Avatar, lilToon/Poiyomi as required by materials, Gesture Manager for local menu testing, and Avatar Optimizer only when optimization is requested.
 - Treat a clothing package as "adapted" only when it was made for the avatar or its armature and body proportions. If the mesh does not fit, weights are wrong, or bone names do not correspond, stop and explain that Blender/weight-painting or a dedicated fitting tool is required.
-- Never upload, publish, delete source assets, or overwrite user packages unless explicitly asked. When upload is requested, treat login, 2FA, and account authorization as a user hand-off in the Unity SDK or browser; do not read, infer, or store credentials.
+- Never upload, publish, delete source assets, or overwrite user packages unless explicitly asked. Prefer saved SDK sessions or a user hand-off for login, 2FA, and account authorization. If the user explicitly provides credentials in the current conversation and explicitly asks Codex to type them, use Computer Use only as a one-time visible UI input path; never place passwords, OTPs, cookies, or tokens in shell commands, scripts, logs, reports, skills, git commits, or chat summaries, and never enable password saving unless the user explicitly asks.
 
 ## Environment Setup
 
@@ -149,13 +149,21 @@ Run validation after every substantial rebuild:
    - Missing/null bones must be `0`.
    - Local bones should be limited to accessories, weapons, and props that are intentionally self-contained.
 
-4. Default/radial sync audit:
+4. PhysBone budget and duplicate audit:
+   - Count `VRCPhysBone` components separately from armature bones. A large SDK number such as `1338` is often component count, not bone count.
+   - Break the count down by top-level avatar root, clothing root, accessory root, and source prefab so the cause is visible.
+   - Detect multiple `VRCPhysBone` components on the same GameObject and repeated exact component signatures. Imported source packages can already contain duplicates; do not assume Codex caused them.
+   - Repair only generated work scenes and work prefabs unless the user explicitly asks to modify vendor/source packages. Keep one exact duplicate component and remove only truly identical duplicates.
+   - Re-run the audit after repair. A valid result has no duplicate component paths, no repeated same-node signatures, no null roots caused by the repair, and total PhysBones within the current VRChat limit.
+   - Do not strip add-on PhysBones from upload builds just to silence a warning when the repaired count is under the limit; preserve clothing dynamics unless there is a real SDK block or the user accepts the loss.
+
+5. Default/radial sync audit:
    - Confirm the default scene view is the desired avatar state, usually the original base outfit unless the user chose otherwise.
    - Confirm add-on outfits, props, DPS/interaction systems, and alternate bodies are off or hidden by default unless explicitly requested.
    - Confirm original and outfit parameters have matching defaults in source parameters, Modular Avatar parameter components, and the NDMF-baked descriptor.
    - Confirm every important menu control has a matching expression parameter and that the baked FX controller contains conditions for it.
 
-5. Runtime Gesture Manager preview:
+6. Runtime Gesture Manager preview:
    - Enter Play Mode.
    - Attach Gesture Manager to the avatar.
    - Open `Expressions`.
@@ -163,7 +171,7 @@ Run validation after every substantial rebuild:
    - Toggle each main outfit piece off and on, including both base tail and outfit tail.
    - Use a walk preview or VRChat proxy walk animation to catch bad bone binding, clipping, or offsets.
 
-6. Capture evidence:
+7. Capture evidence:
    - Save a short text report with parameter cost, menu tree, FX checks, and bone checks.
    - Save at least one screenshot from the test scene when the user wants visual confirmation.
 
@@ -173,8 +181,10 @@ Only perform SDK upload when the user explicitly requests it.
 
 - Before uploading, run static, baked, default/radial, and Gesture Manager checks. Do not upload a build that fails the default/menu sync audit unless the user explicitly accepts the issue.
 - Prefer the visible VRChat SDK Control Panel for the final upload flow because it handles login, 2FA, account permissions, ownership prompts, thumbnails, content warnings, and publish buttons in the supported path.
-- Unity editor scripts may call the public SDK builder API for repeatable builds or uploads, but they still require a valid SDK login session. If a headless or `-executeMethod` upload cannot load `APIUser.CurrentUser`, open the SDK Authentication panel and let the user log in.
+- Unity editor scripts may call the public SDK builder API for repeatable builds or uploads, but they still require a valid SDK login session. If a headless or `-executeMethod` upload cannot load `APIUser.CurrentUser`, open the SDK Authentication panel. If the user asked Codex to enter credentials, use Computer Use to type them into the visible SDK login form without logging or persisting them; otherwise hand the login step to the user.
 - For a first upload, make or select a thumbnail, set `releaseStatus` to `private` unless the user asks otherwise, and let the SDK assign the `PipelineManager.blueprintId`. Keep that blueprint ID in the work scene/prefab for later version updates.
+- For later uploads, preserve or explicitly assign the existing `PipelineManager.blueprintId` so the same private avatar is updated instead of creating a new avatar placeholder.
+- Generate a unique thumbnail file for each SDK upload attempt, or skip image upload when the thumbnail is unchanged. VRChat may reject an already-uploaded identical file before the bundle update step.
 - For adult, suggestive, violent, horror, or otherwise sensitive avatar content, set the appropriate VRChat content warning tags in the SDK upload metadata. Do not publish public content by default.
 - Use a simple project build version such as `0.1.0` for the first real in-game test, then increment the patch or minor version after user-tested changes.
 - After upload, save the scene, prefab, project assets, and a text report containing avatar name, version, blueprint ID if visible, validation results, SDK warnings, and upload time.
@@ -203,6 +213,12 @@ Only perform SDK upload when the user explicitly requests it.
   - Verify clothing breast renderers bind to the avatar armature after NDMF.
   - If the clothing lacks matching blendshapes for the avatar's slider, report the limitation.
 
+- PhysBone count seems impossible:
+  - Confirm whether the SDK warning is counting `VRCPhysBone` components rather than transform bones.
+  - Audit duplicate components on the same GameObject and compare work assets against the original source prefabs.
+  - If an adapted outfit variant has dozens of identical PhysBones per node while sibling variants have one, treat that variant as a duplicated-component import issue.
+  - Repair only generated work assets first, then re-run NDMF bone binding and menu/default audits before uploading.
+
 - Preview looks blurry:
   - Set Game View scale to `1x`.
   - Use an orthographic camera with stable framing.
@@ -220,8 +236,9 @@ Only perform SDK upload when the user explicitly requests it.
 
 - SDK upload is blocked at login:
   - Open `VRChat SDK > Show Control Panel > Authentication`.
-  - Ask the user to complete username/password/2FA or browser authorization.
-  - Do not scrape browser cookies or ask the user to paste passwords.
+  - Prefer a user hand-off for username/password/2FA or browser authorization.
+  - If the user explicitly supplied credentials for this one login and asked Codex to type them, use Computer Use on the visible login form only. Do not store the credentials, do not enable password saving, do not write them into scripts or reports, and hand off any 2FA/CAPTCHA unless the user explicitly supplies the one-time code.
+  - Do not scrape browser cookies or request persistent access tokens.
 
 - SDK upload fails after a headless build script:
   - Read both the generated upload report and `~/Library/Logs/Unity/Editor.log`.

@@ -332,7 +332,7 @@ private static async Task BuildWithSdk(GameObject avatarRoot, VRCAvatar avatarDa
 }
 ```
 
-If `APIUser.CurrentUser` fails to load from saved credentials in a headless run, stop automation and hand off login to the user in `VRChat SDK > Authentication`. Do not attempt to retrieve credentials or cookies from Chrome.
+If `APIUser.CurrentUser` fails to load from saved credentials in a headless run, open `VRChat SDK > Authentication`. Prefer a user hand-off for login. If the user explicitly supplies credentials in the current task and explicitly asks Codex to type them, use Computer Use to enter them into the visible SDK login form once; do not write them to code, shell commands, logs, reports, skill files, git commits, or browser password storage. Hand off CAPTCHA and 2FA unless the user explicitly supplies the one-time code. Do not attempt to retrieve credentials or cookies from Chrome.
 
 After a successful upload, write a version manifest and back up the Unity project source. Use `rsync` or equivalent with cache exclusions such as `Library/`, `Temp/`, `Obj/`, and crash dump folders.
 
