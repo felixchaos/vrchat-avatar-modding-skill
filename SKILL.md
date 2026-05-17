@@ -61,6 +61,7 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
 - Outfit toggles:
   - Outfit pieces, tail, accessories, masks, weapons, body tubes, toys, or props.
   - Preserve vendor labels unless the user explicitly asks for translation.
+  - Compare vendor animation binding paths with the actual instantiated outfit hierarchy. Some packages keep optional promo/effect prefabs in separate folders and reference them from FX clips without including them in the main pack prefab. If a relative binding path is missing, locate the matching optional prefab, attach it under the merge animator's relative root, set its source-default active state from the controlling parameter/clip, and re-run the binding audit.
 
 ## Build The Workspace
 
@@ -125,6 +126,7 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
   - Require every relevant cover-off/open parameter before showing protruding or exposed body shape keys, and add immediate fallback transitions that reset those keys to zero when any covering clothing or accessory is enabled again.
   - Keep source body defaults conservative; use a small appended FX layer through Modular Avatar Merge Animator so the reveal is runtime-only and can be audited independently.
 - For props and weapons, accept local prop bones when intended, but ensure body clothing renderers use avatar bones.
+- For missing outfit piece controls, group renderer paths by semantic part, add a compact submenu when the vendor menu lacks visibility controls, and drive those paths through a small appended FX/MergeAnimator controller. De-duplicate generated helper objects before saving work prefabs and test scenes so repeated repair runs do not stack duplicate merge animators.
 
 ## Menus And Toggle Semantics
 
