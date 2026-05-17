@@ -114,6 +114,7 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
 ## Toggles And Body Variants
 
 - For original clothing toggles, verify the target objects named in the original animations exist in the chosen base avatar.
+- If original underwear or inner layers are visible but absent from the base menu, do not assume adjacent toggles such as dress, tights, or body sliders are sufficient. Add explicit menu controls and a small appended FX layer for those renderer objects, preserving the avatar's existing toggle polarity and keeping the menu page within eight slots.
 - For base tail versus outfit tail, keep separate parameters such as `Tail` and `<Outfit>/Tail` when both exist. Verify both animated paths exist after NDMF processing.
 - For breast/body sliders:
   - Choose clothing variants that match the avatar's default body slider.
