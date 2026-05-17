@@ -201,6 +201,7 @@ Only perform SDK upload when the user explicitly requests it.
 - If the user asks for a backup, copy the Unity project source to the requested external drive or backup directory. Exclude generated caches such as `Library`, `Temp`, `Obj`, and crash dumps; include `Assets`, `Packages`, `ProjectSettings`, `UserSettings`, and `Logs`.
 - Treat SDK alerts by severity. Use SDK-provided Auto Fix for red or upload-blocking items such as protected-layer particle collision or unsupported Unity constraints. Performance-tier warnings such as VeryPoor, triangle count, material slots, skinned mesh count, and PhysBone count may still upload when the user accepts the performance tradeoff.
 - If an SDK Auto Fix triggers texture or asset reimport, wait for Unity to finish importing before building. Starting upload while imports are active can leave stale validation state.
+- For scripted batch uploads, write progress to a report file and log only short status lines to the Unity Console. Avoid dumping full multi-hundred-line reports with `Debug.Log(report.ToString())`; in some Unity/macOS combinations, shutdown-time console logging can turn a successful run into an apparent crash.
 
 ## Troubleshooting
 
@@ -261,7 +262,10 @@ Only perform SDK upload when the user explicitly requests it.
   - Retry through the visible SDK panel when account state, ownership confirmation, content warning UI, or thumbnail UI is involved.
 - Unity crashes on quit after a successful scripted save or upload:
   - Check whether the log reached the save/upload-success lines before the crash.
-  - Avoid `-quit` for final SDK uploads in projects that crash during editor shutdown; keep Unity visible, let the SDK finish, save, then quit manually.
+  - If the stack contains `GetManagerFromContext`, `MonoManager is NULL`, `SceneTracker::NotifyObjectWasDestroyed`, or `EditorMonoConsole::LogToConsoleImplementation` after `Batchmode quit successfully invoked`, treat it as a Unity editor shutdown crash, not necessarily a failed avatar build.
+  - Avoid `-quit` for final SDK uploads in projects that crash during editor shutdown. For repeatable automation, use a batch-safe runner: save all scenes/assets/reports, write an explicit `.done` marker, flush stdout/stderr, then terminate the Unity process directly instead of entering Unity `CoreShutdown`.
+  - Disable or bypass editor-only preview systems during batch mode when they create temporary scenes or proxy objects, especially NDMF Preview. Batch scripts do not need visual preview scenes; use visible-editor Gesture Manager for interactive preview.
+  - On Apple Silicon, if VRChat Base repeatedly logs an incompatible `OculusSpatializer` macOS bundle during every save/import, disable that plugin's Editor/OSX preloading in the local project metadata. It is not required for avatar SDK uploads and can hide the real error signal in logs.
   - Do not rerun destructive rebuilds just because Unity crashed after a successful post-save shutdown. First verify the scene, report, and uploaded blueprint ID.
 
 ## Completion Criteria
