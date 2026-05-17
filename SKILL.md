@@ -74,7 +74,7 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
 2. Instantiate the correct base avatar:
    - Prefer the original full avatar prefab if the user wants original clothing and body toggles preserved.
    - Avoid using a vendor "kisekae", "naked", "test", or clothing demo prefab if it omits original outfit objects or uses a reduced FX/menu, unless that is explicitly desired.
-   - Clear blueprint IDs on generated work prefabs/scenes.
+   - Clear blueprint IDs on generated work prefabs/scenes when the user wants a new avatar container. Re-check the serialized scene/prefab for `blueprintId` immediately before opening the SDK upload panel.
 
 3. Attach the clothing:
    - Instantiate the chosen clothing prefab as a child of the avatar root unless the package requires a different installer location.
@@ -109,6 +109,7 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
    - Synchronize defaults across the scene/prefab state, `VRCExpressionParameters`, `ModularAvatarParameters`, and the NDMF-baked descriptor.
    - Keep the new outfit defaults from the vendor package unless they conflict with the base avatar.
    - Align body-size defaults with the chosen clothing variant.
+   - When choosing a body-size variant, synchronize the visible renderer blendshape weights, expression parameter defaults, Modular Avatar shape/parameter defaults, and any size-specific PhysBone roots. Do not leave multiple body-size variants visible or active unless the outfit explicitly supports that.
 
 ## Toggles And Body Variants
 
@@ -136,6 +137,7 @@ Run validation after every substantial rebuild:
    - Every menu parameter exists in expression parameters.
    - Every page has no more than 8 controls.
    - Parameter cost is `<= 256`.
+   - If the outfit uses `ModularAvatarMenuInstaller` or similar installers, the source descriptor may show only the base avatar menu. Audit the NDMF-baked avatar as the source of truth for final menu entries and merged parameters.
 
 2. FX compatibility audit:
    - Base avatar FX still contains original clothing, body, tail, hair, and face conditions or blend-tree parameters.
@@ -148,6 +150,7 @@ Run validation after every substantial rebuild:
    - Body clothing bones should be children of the baked avatar armature.
    - Missing/null bones must be `0`.
    - Local bones should be limited to accessories, weapons, and props that are intentionally self-contained.
+   - Record the baked menu tree and baked expression parameter cost, not only the pre-bake descriptor. This catches menu installers that work only after NDMF and menu assets that look incomplete before baking.
 
 4. PhysBone budget and duplicate audit:
    - Count `VRCPhysBone` components separately from armature bones. A large SDK number such as `1338` is often component count, not bone count.
@@ -182,13 +185,15 @@ Only perform SDK upload when the user explicitly requests it.
 - Before uploading, run static, baked, default/radial, and Gesture Manager checks. Do not upload a build that fails the default/menu sync audit unless the user explicitly accepts the issue.
 - Prefer the visible VRChat SDK Control Panel for the final upload flow because it handles login, 2FA, account permissions, ownership prompts, thumbnails, content warnings, and publish buttons in the supported path.
 - Unity editor scripts may call the public SDK builder API for repeatable builds or uploads, but they still require a valid SDK login session. If a headless or `-executeMethod` upload cannot load `APIUser.CurrentUser`, open the SDK Authentication panel. If the user asked Codex to enter credentials, use Computer Use to type them into the visible SDK login form without logging or persisting them; otherwise hand the login step to the user.
-- For a first upload, make or select a thumbnail, set `releaseStatus` to `private` unless the user asks otherwise, and let the SDK assign the `PipelineManager.blueprintId`. Keep that blueprint ID in the work scene/prefab for later version updates.
+- For a first upload or explicitly requested new container, make or select a thumbnail, set `releaseStatus` to `private` unless the user asks otherwise, verify `PipelineManager.blueprintId` is empty, and let the SDK assign the new ID. After success, save and record the generated `avtr_...` ID in the upload report.
 - For later uploads, preserve or explicitly assign the existing `PipelineManager.blueprintId` so the same private avatar is updated instead of creating a new avatar placeholder.
 - Generate a unique thumbnail file for each SDK upload attempt, or skip image upload when the thumbnail is unchanged. VRChat may reject an already-uploaded identical file before the bundle update step.
 - For adult, suggestive, violent, horror, or otherwise sensitive avatar content, set the appropriate VRChat content warning tags in the SDK upload metadata. Do not publish public content by default.
 - Use a simple project build version such as `0.1.0` for the first real in-game test, then increment the patch or minor version after user-tested changes.
 - After upload, save the scene, prefab, project assets, and a text report containing avatar name, version, blueprint ID if visible, validation results, SDK warnings, and upload time.
 - If the user asks for a backup, copy the Unity project source to the requested external drive or backup directory. Exclude generated caches such as `Library`, `Temp`, `Obj`, and crash dumps; include `Assets`, `Packages`, `ProjectSettings`, `UserSettings`, and `Logs`.
+- Treat SDK alerts by severity. Use SDK-provided Auto Fix for red or upload-blocking items such as protected-layer particle collision or unsupported Unity constraints. Performance-tier warnings such as VeryPoor, triangle count, material slots, skinned mesh count, and PhysBone count may still upload when the user accepts the performance tradeoff.
+- If an SDK Auto Fix triggers texture or asset reimport, wait for Unity to finish importing before building. Starting upload while imports are active can leave stale validation state.
 
 ## Troubleshooting
 
@@ -243,6 +248,10 @@ Only perform SDK upload when the user explicitly requests it.
 - SDK upload fails after a headless build script:
   - Read both the generated upload report and `~/Library/Logs/Unity/Editor.log`.
   - Retry through the visible SDK panel when account state, ownership confirmation, content warning UI, or thumbnail UI is involved.
+- Unity crashes on quit after a successful scripted save or upload:
+  - Check whether the log reached the save/upload-success lines before the crash.
+  - Avoid `-quit` for final SDK uploads in projects that crash during editor shutdown; keep Unity visible, let the SDK finish, save, then quit manually.
+  - Do not rerun destructive rebuilds just because Unity crashed after a successful post-save shutdown. First verify the scene, report, and uploaded blueprint ID.
 
 ## Completion Criteria
 
