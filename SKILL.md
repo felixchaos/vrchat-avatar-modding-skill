@@ -119,6 +119,10 @@ Use `rg --files`, Unity YAML inspection, and editor scripts to identify:
   - Choose clothing variants that match the avatar's default body slider.
   - If the avatar's slider changes body blendshapes but the clothing lacks matching blendshapes, document the limitation or add supported shape-change components.
   - Disable or reset toy/prop animations that drive breast or body bones when testing alignment.
+- For body-shape reveal/hide links that depend on clothing coverage:
+  - Drive the reveal from VRChat expression parameters and FX/Modular Avatar animator conditions, not from Unity Hierarchy active states or Scene Visibility eye icons. Manual editor hiding does not prove the in-game radial parameter chain works.
+  - Require every relevant cover-off/open parameter before showing protruding or exposed body shape keys, and add immediate fallback transitions that reset those keys to zero when any covering clothing or accessory is enabled again.
+  - Keep source body defaults conservative; use a small appended FX layer through Modular Avatar Merge Animator so the reveal is runtime-only and can be audited independently.
 - For props and weapons, accept local prop bones when intended, but ensure body clothing renderers use avatar bones.
 
 ## Menus And Toggle Semantics
@@ -217,6 +221,10 @@ Only perform SDK upload when the user explicitly requests it.
   - Reset breast/toy/plug parameters that drive breast bones.
   - Verify clothing breast renderers bind to the avatar armature after NDMF.
   - If the clothing lacks matching blendshapes for the avatar's slider, report the limitation.
+
+- Outfit root shows few components:
+  - Inspect recursively under child installer roots and the baked avatar before concluding the package is missing setup. Many outfits keep the top-level root as a Transform-only container while MergeAnimator, MenuInstaller, Parameters, PhysBone, BoneProxy, and SkinnedMeshRenderer components live on child objects.
+  - If automation menus or scripts disappear, fix all unrelated editor compile errors first; one broken editor script prevents Unity from compiling every new menu item and follow-up utility.
 
 - PhysBone count seems impossible:
   - Confirm whether the SDK warning is counting `VRCPhysBone` components rather than transform bones.
