@@ -9,6 +9,18 @@ Use this workflow to turn a base VRChat avatar and an adapted outfit into a work
 
 For reusable Unity editor automation patterns, read `references/unity-editor-automation.md` only when you need to write or patch editor scripts.
 
+## Fast Operating Loop
+
+Use this loop unless the user is only asking for research or a code review:
+
+1. Discover the real avatar, outfit, menus, parameters, controllers, and installer components from imported assets.
+2. Create or update isolated work assets; never edit vendor/source assets as the first move.
+3. Merge armatures, FX controllers, menus, and parameters while preserving the base avatar's original controls.
+4. Set conservative defaults and align body-size or clothing variants before testing.
+5. Run static, binding, control-coverage, PhysBone, and body-shape audits; fix failures before preview.
+6. Open Gesture Manager or a visible Unity scene for user-facing preview when interaction matters.
+7. Upload only on explicit request, then record version, blueprint ID, SDK warnings, reports, and backups.
+
 ## Core Rules
 
 - Work from discovered facts: find `VRCAvatarDescriptor`, humanoid `Animator`, armature root, clothing prefab roots, FX controllers, expression menus, expression parameters, and Modular Avatar components before editing.
@@ -150,6 +162,9 @@ Run validation after every substantial rebuild:
    - Base avatar FX still contains original clothing, body, tail, hair, and face conditions or blend-tree parameters.
    - Outfit FX conditions are present after merge.
    - Animated binding paths refer to objects that exist in the baked avatar.
+   - When auditing renderer control coverage, include animated bindings on ancestor paths, not only the renderer's exact path.
+   - Treat object active state, renderer enabled state, and visibility-like transforms such as `m_LocalScale` zero/one as valid visibility controls when they are driven by menu-visible parameters.
+   - Do not flag a child renderer as uncontrolled when its parent or semantic group root is already toggled by a radial parameter.
 
 3. NDMF/Modular Avatar baked audit:
    - Duplicate the avatar and process it with NDMF.
@@ -202,6 +217,7 @@ Only perform SDK upload when the user explicitly requests it.
 - Treat SDK alerts by severity. Use SDK-provided Auto Fix for red or upload-blocking items such as protected-layer particle collision or unsupported Unity constraints. Performance-tier warnings such as VeryPoor, triangle count, material slots, skinned mesh count, and PhysBone count may still upload when the user accepts the performance tradeoff.
 - If an SDK Auto Fix triggers texture or asset reimport, wait for Unity to finish importing before building. Starting upload while imports are active can leave stale validation state.
 - For scripted batch uploads, write progress to a report file and log only short status lines to the Unity Console. Avoid dumping full multi-hundred-line reports with `Debug.Log(report.ToString())`; in some Unity/macOS combinations, shutdown-time console logging can turn a successful run into an apparent crash.
+- For repeatable headless repair or upload tasks, create an explicit success marker such as `Logs/<task>.done` only after scene save, asset save, report write, and upload confirmation. Treat that marker and the upload report as the source of truth when Unity itself crashes after success.
 
 ## Troubleshooting
 
