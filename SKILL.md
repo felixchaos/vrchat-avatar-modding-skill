@@ -217,6 +217,8 @@ Only perform SDK upload when the user explicitly requests it.
 - Treat SDK alerts by severity. Use SDK-provided Auto Fix for red or upload-blocking items such as protected-layer particle collision or unsupported Unity constraints. Performance-tier warnings such as VeryPoor, triangle count, material slots, skinned mesh count, and PhysBone count may still upload when the user accepts the performance tradeoff.
 - If an SDK Auto Fix triggers texture or asset reimport, wait for Unity to finish importing before building. Starting upload while imports are active can leave stale validation state.
 - For scripted batch uploads, write progress to a report file and log only short status lines to the Unity Console. Avoid dumping full multi-hundred-line reports with `Debug.Log(report.ToString())`; in some Unity/macOS combinations, shutdown-time console logging can turn a successful run into an apparent crash.
+- In macOS headless uploads, keep all upload progress callbacks thread-safe. Cache `Application.isBatchMode` or any logging-mode decision once on the main thread before upload starts, then write progress to stdout and report files from callbacks. Do not call `Application`, `Debug.Log`, or `VRC.Core.Logger` from HTTP upload/background serialization callbacks.
+- If using a scripted SDK upload path that hits `VRCProgressContent` or `VRCTools.IncreaseSendBuffer`, beware that those helper paths can call Unity logging or Unity state from a background thread. A repeatable failure on the first multipart part can be fixed locally by bypassing the send-buffer helper and removing background `Core.Logger` calls, or by switching the final upload to the visible SDK panel.
 - For repeatable headless repair or upload tasks, create an explicit success marker such as `Logs/<task>.done` only after scene save, asset save, report write, and upload confirmation. Treat that marker and the upload report as the source of truth when Unity itself crashes after success.
 
 ## Troubleshooting
@@ -276,6 +278,8 @@ Only perform SDK upload when the user explicitly requests it.
 - SDK upload fails after a headless build script:
   - Read both the generated upload report and `~/Library/Logs/Unity/Editor.log`.
   - Retry through the visible SDK panel when account state, ownership confirmation, content warning UI, or thumbnail UI is involved.
+  - If the bundle builds, the API creates an avatar/file record, and upload fails repeatedly at the first multipart stage around 9-11%, inspect the SDK/API log for `get_isBatchMode can only be called from the main thread`. That indicates a Unity/SDK background-thread logging bug, not a menu, bone, or parameter-budget rejection. Make the progress reporter thread-safe and avoid SDK background `Core.Logger` calls before retrying.
+  - Keep presigned upload URLs out of chat, skills, commits, and final reports. Summarize only the host/status/error because those URLs may contain temporary upload credentials.
 - Unity crashes on quit after a successful scripted save or upload:
   - Check whether the log reached the save/upload-success lines before the crash.
   - If the stack contains `GetManagerFromContext`, `MonoManager is NULL`, `SceneTracker::NotifyObjectWasDestroyed`, or `EditorMonoConsole::LogToConsoleImplementation` after `Batchmode quit successfully invoked`, treat it as a Unity editor shutdown crash, not necessarily a failed avatar build.
